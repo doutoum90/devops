@@ -99,6 +99,7 @@ services:
 networks:
   esnet:
 
+
 volumes:
   postgresql_data:
   sonarqube_bundled-plugins:
