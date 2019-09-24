@@ -88,6 +88,14 @@ services:
       - 5601:5601
     depends_on: 
       - elasticsearch
+  nexus:
+    image: sonatype/nexus
+    volumes:
+      - "nexus-data:/sonatype-work"
+    ports:
+      - "8081:8081"
+
+
 networks:
   esnet:
 
@@ -98,6 +106,7 @@ volumes:
   sonarqube_data:
   sonarqube_db:
   sonarqube_extensions:
+  nexus-data: {}
   esdata1:
       driver: local
 
