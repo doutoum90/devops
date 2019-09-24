@@ -94,7 +94,13 @@ services:
       - "nexus-data:/sonatype-work"
     ports:
       - "8081:8081"
-
+  jira:
+    image: addteq/jira:latest
+    container_name: demo-jira-latest
+    ports: 
+      - 8080:8080
+    volumes:
+      - ./jira-home:/opt/atlassian-home
 
 networks:
   esnet:
