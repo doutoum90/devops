@@ -1,0 +1,13 @@
+version: "3.4"
+
+services:
+  front:
+    container_name: 'simple-front'
+    build: .
+    ports:
+      - '4200:4200'
+    networks:
+      - telerys
+networks:
+  telerys:
+    driver: bridge

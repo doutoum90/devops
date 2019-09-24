@@ -101,6 +101,11 @@ services:
       - 8080:8080
     volumes:
       - ./jira-home:/opt/atlassian-home
+  compodoc:
+    image: zalari/compodoc-ngrx
+    container_name: compodoc
+    ports: 
+      - 8085:8085
 
 networks:
   esnet:
