@@ -6,31 +6,33 @@ see this [link](https://github.com/deviantony/docker-elk/blob/master/docker-comp
 
 # [Passport](https://www.npmjs.com/package/passport) 
 
-Passport est un middleware d'authentification pour Node.js. Extrêmement flexible et modulaire, Passport peut être inséré discrètement dans toute application Web basée sur Express. Un ensemble complet de stratégies prend en charge l'authentification à l'aide d'un nom d'utilisateur et d'un mot de passe (ou locale), Facebook, Twitter, etc.
+Passport est un middleware d'authentification pour Node.js. Extrêmement flexible et modulaire, Passport peut être inséré discrètement dans toute application Web basée sur Express. Un ensemble complet de stratégies prend en charge l'authentification à l'aide d'un nom d'utilisateur et d'un mot de passe (ou locale), 
+Google, Facebook, Twitter, etc.
 Passport implémente actuellement plus de 500 strategies. Nous étudions deux stratégies dans la suite de ce documents.
 
 Pour installer passport dans un projet node, il suffit de se positionner à la racine du projet et d'executer la commande ci-dessous.
 
 ````
-npm i passport
-````
-ou 
-````
 npm install passport
 ````
-ou encore
+ou de passer courte
 ````
-npm install passport -S
+npm i passport
+````
+ou encore pour l'installer et l'ajouter dans les dependances du projet.
+````
+npm i passport -S
 ````
 ## Passport Local
 
-Cette stratégie permet de gérer l'authentification en se basant sur le login et mot de passe. 
-Pour cela nous installons deux bibliothèques [passport-local](https://www.npmjs.com/package/passport-local) et [passport-jwt](https://www.npmjs.com/package/passport-jwt) installer cette bibliothèque on utilise la commande ci-dessous.
+Cette stratégie permet de gérer l'authentification en se basant sur le login (email) et mot de passe. 
+Pour cela nous installons deux bibliothèques [passport-local](https://www.npmjs.com/package/passport-local) et [passport-jwt](https://www.npmjs.com/package/passport-jwt).
+Pour les installer nous utilisons la commande ci-dessous.
 ````
 npm i passport-local -S 
 npm i passport-jwt -S
 ````
-Une fois authentifié, nous générons deux tokens `token` et `refreshToken` . Pour ça nous utilisons une autre bibliothèque: [JWT](https://jwt.io/).
+Une fois authentifié, nous générons deux tokens `token` et `refreshToken` . Pour la génération de token nous utilisons une autre bibliothèque: [JWT](https://jwt.io/).
 
 ### [JWT](https://www.npmjs.com/package/jsonwebtoken)
 
@@ -46,10 +48,14 @@ Ci-dessous un exemple de code utilisant passport-local.
 
 ````
 #fichier: passport-local-setup.js
+#Récuperation de la strategie.
 const  LocalStrategy  =  require('passport-local').Strategy;
+#Récuperation de passport jwt
 const  passportJWT  =  require("passport-jwt");
+#Récuperation des strategies de passportJWT
 const  JWTStrategy  =  passportJWT.Strategy;
 const  ExtractJWT  =  passportJWT.ExtractJwt;
+#Récuperation de l'environnement et de la config.
 const  env  =  process.env.NODE_ENV  ||  'development';
 const  config  =  require(__dirname  +  '/../config/config.json')[env];
 module.exports  = (passport) => {
@@ -59,6 +65,7 @@ module.exports  = (passport) => {
 	passport.deserializeUser((user, done) => {
 		done(null, user);
 	});
+	#Initialisation de la localStrategy
 	passport.use(new  LocalStrategy({
 			usernameField:  'email',
 			passwordField:  'password'
@@ -68,6 +75,7 @@ module.exports  = (passport) => {
 		}
 		)
 	);
+	# Initialisation de la JWTStrategy
 	passport.use(new  JWTStrategy({
 			jwtFromRequest:  ExtractJWT.fromAuthHeaderAsBearerToken(),
 			secretOrKey:  config.passport_key
@@ -77,6 +85,37 @@ module.exports  = (passport) => {
 	);
 };
 ````
+
+`````
+#fichier:user.js
+...
+const  db  =  require("../../models");
+const  passport  =  require('passport');
+const  jwt  =  require('jsonwebtoken');
+const  bcrypt  =  require('bcryptjs');
+const  env  =  process.env.NODE_ENV  ||  'development';
+const  config  =  require(__dirname  +  '/../../config/config.json')[env];
+router.post('/login', (req, res, next) => {
+	passport.authenticate('local', { session:  false }, (err, user, info) => {
+		try {
+			req.login(user, { session:  false }, (err) => {
+				if (err) {
+					res.send(err);
+				}
+				db.users.findOne({ login:  user.email }).then(existedUser  => {
+					if (!existedUser) return  res.status(400).send('incorrect login');
+					const  validPass  =  bcrypt.compareSync(user.password, existedUser.hashed_password);
+					if (!validPass) return  res.status(400).send('incorrect password');
+					const  token  =  jwt.sign(user, config.passport_key, { expiresIn:  '10m' });
+					return  res.json({ err, email:  existedUser.login, info, token });
+				});
+			});
+			} catch (err) {
+				res.status(400).send(err);
+			}
+	})(req, res);
+});
+`````
 
 ````
 #fichier:app.js
@@ -88,6 +127,8 @@ localAuthSetup(passport);
 app.use(passport.initialize());
 app.use('/user', userRouter);
 ````
+
+
 ##  [Passport Google](https://www.npmjs.com/package/passport-google-oauth)
 
 Cette stratégie permet de gérer l'authentification en se basant sur l'authentification Google.
@@ -95,6 +136,54 @@ Pour installer cette bibliothèque nous utilisons la commande ci-dessous.
 ````
 npm i passport-google-oauth -S 
 ````
+
+Avant tous, nous aurons besoins de fournir quelques elements à notre appli qui sont les suivants:
+* clientID
+* clientSecret
+* callbackURL
+Pour ça nous aurons besoins de passer par les étapes suivantes:
+
+* Avoir un compte google.
+* Aller sur [la console de développeur](https://console.developers.google.com/), nous aurons donc l'affichage suivant:
+![Console developpeur](images/passport1.png)
+* Nous aurons besoins de créer un projet en cliquant sur le bouton `sélectionner un projet` ensuite sur le bouton `NEW PROJECT`.
+![Console developpeur](images/passport2.png)
+![Console developpeur](images/passport3.png)
+* Une nouvelle fenêtre s'ouvre ou on doit saisir
+![Console developpeur](images/passport5.png)
+    * le `nom` du projet
+    * sélectionner l'organisation 
+    * cliquer sur le bouton `CREATE`
+* Une fois le projet créé nous aurons l'affichage suivant ou apparait le bouton `Enable Apis and Services`.
+![Console developpeur](images/passport6.png)
+* cliquer sur ce bouton et chercher `Google+`.
+![Console developpeur](images/passport7.png)
+* Sélectionner sur `Google+ API`dans le résultat et cliquer sur `Enable`.
+![Console developpeur](images/passport8.png)
+* cliquer sur `Create credentials`, apparait une fenetre ou il faut saisir les infos suivantes:
+![Console developpeur](images/passport9.png)
+![Console developpeur](images/passport10.png)
+    * sélectionner  l'api: sélectionner `Google+ API`
+    * l'endroit depuis lequel appelé l'api: sélectionner `Web server`
+    * type de données à accéder:  prendre `userdata`
+    * cliquer sur le bouton `What credentials do I need?`.
+* apparait une autre fenêtre, dans laquelle il faut saisir des informations qui sont:
+![Console developpeur](images/passport11.png)
+    * le nom
+    * liens vers un javascript autorisé:   http://localhost:3000
+    * lien de redirection autorisé:   http://localhost:3000/auth/google/callback
+    * cliquer sur `create OAuth client ID`.
+* cliquer sur le button `I'll do it later`
+![Console developpeur](images/passport12.png)
+
+* Nous avons ici la liste de credentials. Pour plus de détails, cliquer sur l'élement en question.
+![Console developpeur](images/passport13.png)
+* voici les elements indispensables à notre api d'authentification.
+    * Le client ID
+    * Le client secret
+    * Les liens de redirection autorisés. 
+    * ![Console developpeur](images/passport15.png)
+
 
 Exemple de mise en place de l'authentification avec passport-google-oauth.
 
