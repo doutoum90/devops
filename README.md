@@ -351,3 +351,6 @@ googleAuthSetup(passport, refresh);
 app.use(passport.initialize());
 app.use('/auth', googleAuth);
 ````
+
+
+[Lien vers un pipe ](https://github.com/fknop/angular-pipes/blob/master/src/math/bytes.pipe.ts)
